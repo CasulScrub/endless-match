@@ -1,4 +1,4 @@
-# 🎮 Endless Match
+# 🎮 Endless Match 🎮 
 
 ## 🎯 About
 A fast-paced memory match game where speed and strategy combine! Match pairs of colored shapes before time runs out, build combos for higher scores, and chase high scores in this addictive browser game.
