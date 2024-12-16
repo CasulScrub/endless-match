@@ -1,8 +1,23 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "./assets/components/ui/card.jsx";
 import { Badge } from "./assets/components/ui/badge.jsx";
-import { Button } from "./assets/components/ui/buttons.jsx";  // note: 'buttons.jsx' not 'button.jsx'
+import { Button } from "./assets/components/ui/buttons.jsx";  
 import { Trophy, Star, Timer, TrendingUp, Sparkles } from 'lucide-react';
+import { useSound, SoundEffects } from './assets/utils/soundManager.jsx';
+
+function VolumeControl() {
+  const { isMuted, toggleMute } = useSound();
+  
+  return (
+    <button 
+      onClick={toggleMute}
+      className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 text-lg"
+    >
+      {isMuted ? "🔇" : "🔊"}
+    </button>
+  );
+}
+
 
 const EndlessMatch = () => {
   const [score, setScore] = useState(0);
@@ -14,6 +29,7 @@ const EndlessMatch = () => {
   const [multiplier, setMultiplier] = useState(1);
   const [lastMatchTime, setLastMatchTime] = useState(null);
   const [matchAnimation, setMatchAnimation] = useState(null);
+  const { playSound } = useSound();
   
   const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500'];
   const shapes = ['rounded-full', 'rounded-none', 'rounded-lg', 'rounded-3xl'];
@@ -30,6 +46,7 @@ const EndlessMatch = () => {
   }, []);
 
   const startGame = () => {
+    playSound(SoundEffects.GAME_START);
     setGameState('playing');
     setScore(0);
     setStreak(0);
@@ -46,7 +63,7 @@ const EndlessMatch = () => {
 
   const handleTileClick = (clickedTile, index) => {
     if (gameState !== 'playing') return;
-    
+    playSound(SoundEffects.TILE_CLICK);  // Play click soundplaySound(SoundEffects.TILE_CLICK);  // Play click sound
     const newTiles = [...currentTiles];
     const unmatched = newTiles.filter(tile => !tile.matched);
     const selected = unmatched.filter(tile => tile.selected);
@@ -57,6 +74,7 @@ const EndlessMatch = () => {
       clickedTile.selected = true;
       
       if (selected[0].color === clickedTile.color && selected[0].shape === clickedTile.shape) {
+        playSound(SoundEffects.MATCH_SUCCESS);
         selected[0].matched = true;
         clickedTile.matched = true;
         
@@ -85,6 +103,7 @@ const EndlessMatch = () => {
           return;
         }
       } else {
+        playSound(SoundEffects.MATCH_FAIL);
         setStreak(0);
         setMultiplier(1);
       }
@@ -104,6 +123,7 @@ const EndlessMatch = () => {
       timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
+            playSound(SoundEffects.GAME_OVER);
             setGameState('ended');
             setHighScore(current => Math.max(current, score));
             return 0;
@@ -128,6 +148,7 @@ const EndlessMatch = () => {
         <>
           <div className="flex justify-between mb-4">
             <div className="flex gap-4">
+            <VolumeControl />  {/* Added here, will be leftmost */}
               <Badge variant="secondary" className={`text-lg transition-transform duration-300 ${score > highScore ? 'animate-bounce' : ''}`}>
                 <Trophy className="w-4 h-4 mr-1" />
                 {score}
