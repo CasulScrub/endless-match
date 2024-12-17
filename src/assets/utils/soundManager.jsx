@@ -11,6 +11,7 @@ const soundFiles = {
   streak5x: new Audio('/src/assets/sounds/effects/streak-5x.mp3'),
   highScore: new Audio('/src/assets/sounds/effects/high_score.mp3'),
   boardClear: new Audio('/src/assets/sounds/effects/board-clear.mp3'),
+  backgroundMusic: new Audio('/src/assets/sounds/effects/background-music.mp3'),
 };
 
 // Create context for sound management
@@ -20,11 +21,12 @@ export const SoundProvider = ({ children }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.5); // 50% volume by default
 
-  // Initialize all sounds
+  // Initialize sounds and set up background music looping
   React.useEffect(() => {
     Object.values(soundFiles).forEach(audio => {
       audio.volume = volume;
     });
+    soundFiles.backgroundMusic.loop = true;
   }, [volume]);
 
   // Play sound function
@@ -38,27 +40,49 @@ export const SoundProvider = ({ children }) => {
     }
   }, [isMuted]);
 
+  // Start background music
+  const startBackgroundMusic = useCallback(() => {
+    if (!isMuted) {
+      soundFiles.backgroundMusic.play().catch(error => {
+        console.log('Error playing background music:', error);
+      });
+    }
+  }, [isMuted]);
+
   // Toggle mute function
   const toggleMute = useCallback(() => {
-    setIsMuted(prev => !prev);
-  }, []);
-
-  // Adjust volume function
-  const adjustVolume = useCallback((newVolume) => {
-    const clampedVolume = Math.max(0, Math.min(1, newVolume));
-    setVolume(clampedVolume);
-    Object.values(soundFiles).forEach(audio => {
-      audio.volume = clampedVolume;
+    setIsMuted(prev => {
+      const newMuted = !prev;
+      if (newMuted) {
+        // Stop all sounds including background music
+        Object.values(soundFiles).forEach(audio => {
+          audio.pause();
+          audio.currentTime = 0;
+        });
+      } else {
+        // Resume background music if game is in progress
+        soundFiles.backgroundMusic.play().catch(console.error);
+      }
+      return newMuted;
     });
   }, []);
 
-  // Context value
+  // Clean up function to stop all sounds when component unmounts
+  React.useEffect(() => {
+    return () => {
+      Object.values(soundFiles).forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+    };
+  }, []);
+
   const value = {
     playSound,
     toggleMute,
-    adjustVolume,
     isMuted,
-    volume
+    volume,
+    startBackgroundMusic
   };
 
   return (
@@ -88,4 +112,7 @@ export const SoundEffects = {
   STREAK_5X: 'streak5x',
   HIGH_SCORE: 'highScore',
   BOARD_CLEAR: 'boardClear',
+  BACKGROUND_MUSIC: 'backgroundMusic'
 };
+
+export default SoundProvider;

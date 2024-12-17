@@ -20,6 +20,7 @@ function VolumeControl() {
 
 
 const EndlessMatch = () => {
+  const { playSound, startBackgroundMusic } = useSound();
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -29,7 +30,7 @@ const EndlessMatch = () => {
   const [multiplier, setMultiplier] = useState(1);
   const [lastMatchTime, setLastMatchTime] = useState(null);
   const [matchAnimation, setMatchAnimation] = useState(null);
-  const { playSound } = useSound();
+  
   
   const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500'];
   const shapes = ['rounded-full', 'rounded-none', 'rounded-lg', 'rounded-3xl'];
@@ -46,7 +47,9 @@ const EndlessMatch = () => {
   }, []);
 
   const startGame = () => {
+    
     playSound(SoundEffects.GAME_START);
+    startBackgroundMusic(); 
     setGameState('playing');
     setScore(0);
     setStreak(0);
