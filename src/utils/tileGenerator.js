@@ -1,0 +1,230 @@
+/**
+ * Tile Generator Utility Module
+ *
+ * This module handles the creation and randomization of game tiles.
+ * It provides pure functions that generate tile configurations
+ * based on the game's configuration settings.
+ *
+ * Key responsibilities:
+ * - Generate matching pairs of tiles
+ * - Randomize tile positions
+ * - Assign unique IDs to tiles
+ */
+
+/**
+ * Generates a random element from an array
+ *
+ * This is a helper function used to randomly select colors and shapes.
+ *
+ * @param {Array} array - The array to pick a random element from
+ * @returns {*} A random element from the array
+ *
+ * @example
+ * const colors = ['red', 'blue', 'green'];
+ * const randomColor = getRandomElement(colors); // Returns 'blue' (random)
+ */
+const getRandomElement = (array) => {
+  // Generate random index between 0 and array length - 1
+  const randomIndex = Math.floor(Math.random() * array.length);
+  return array[randomIndex];
+};
+
+/**
+ * Shuffles an array using the Fisher-Yates algorithm
+ *
+ * This algorithm ensures truly random shuffling by:
+ * 1. Starting from the end of the array
+ * 2. Swapping each element with a random element before it
+ * 3. Working backwards to the start
+ *
+ * Time complexity: O(n)
+ * Space complexity: O(1) - shuffles in place
+ *
+ * @param {Array} array - The array to shuffle
+ * @returns {Array} A new shuffled array (does not mutate original)
+ *
+ * @example
+ * const tiles = [1, 2, 3, 4];
+ * const shuffled = shuffleArray(tiles); // Returns [3, 1, 4, 2] (random order)
+ */
+export const shuffleArray = (array) => {
+  // Create a copy to avoid mutating the original array
+  const shuffled = [...array];
+
+  // Fisher-Yates shuffle algorithm
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    // Generate random index from 0 to i (inclusive)
+    const j = Math.floor(Math.random() * (i + 1));
+
+    // Swap elements at positions i and j using array destructuring
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled;
+};
+
+/**
+ * Creates a tile object with the specified properties
+ *
+ * Each tile represents a game piece that players must match.
+ * Tiles have visual properties (color, shape) and state properties
+ * (matched status, selected status).
+ *
+ * @param {number} id - Unique identifier for the tile
+ * @param {string} color - Tailwind CSS color class (e.g., 'bg-red-500')
+ * @param {string} shape - Tailwind CSS border-radius class (e.g., 'rounded-full')
+ * @returns {Object} A tile object with all necessary properties
+ *
+ * @example
+ * const tile = createTile(0, 'bg-red-500', 'rounded-full');
+ * // Returns: { id: 0, color: 'bg-red-500', shape: 'rounded-full', matched: false, selected: false }
+ */
+export const createTile = (id, color, shape) => {
+  return {
+    // Unique identifier for React key and tile tracking
+    id,
+
+    // Visual properties
+    color, // Tailwind CSS background color class
+    shape, // Tailwind CSS border-radius class
+
+    // State properties
+    matched: false, // Whether this tile has been successfully matched
+    selected: false, // Whether this tile is currently selected by the player
+  };
+};
+
+/**
+ * Generates a complete set of tiles for the game board
+ *
+ * This is the main function for creating game boards. It:
+ * 1. Creates pairs of matching tiles (same color and shape)
+ * 2. Ensures the specified number of pairs is created
+ * 3. Randomizes the tile positions on the board
+ * 4. Assigns unique IDs to each tile
+ *
+ * Algorithm:
+ * - For each pair needed:
+ *   1. Randomly select a color from available colors
+ *   2. Randomly select a shape from available shapes
+ *   3. Create two identical tiles (a matching pair)
+ *   4. Assign unique IDs (even and odd numbers for the pair)
+ * - Shuffle all tiles to randomize their positions
+ *
+ * @param {Object} config - Game configuration object
+ * @param {string[]} config.colors - Array of color classes to use
+ * @param {string[]} config.shapes - Array of shape classes to use
+ * @param {number} config.pairsPerBoard - Number of matching pairs to create
+ * @returns {Array<Object>} Array of tile objects, randomized and ready to display
+ *
+ * @example
+ * const config = {
+ *   colors: ['bg-red-500', 'bg-blue-500'],
+ *   shapes: ['rounded-full', 'rounded-lg'],
+ *   pairsPerBoard: 2
+ * };
+ * const tiles = generateTiles(config);
+ * // Returns 4 tiles (2 pairs), shuffled randomly
+ * // Example result: [
+ * //   { id: 0, color: 'bg-red-500', shape: 'rounded-full', matched: false },
+ * //   { id: 1, color: 'bg-red-500', shape: 'rounded-full', matched: false },
+ * //   { id: 2, color: 'bg-blue-500', shape: 'rounded-lg', matched: false },
+ * //   { id: 3, color: 'bg-blue-500', shape: 'rounded-lg', matched: false }
+ * // ]
+ */
+export const generateTiles = (config) => {
+  const { colors, shapes, pairsPerBoard } = config;
+  const tiles = [];
+
+  // Generate the specified number of matching pairs
+  for (let i = 0; i < pairsPerBoard; i++) {
+    // Randomly select visual properties for this pair
+    const color = getRandomElement(colors);
+    const shape = getRandomElement(shapes);
+
+    // Create two tiles with identical properties (a matching pair)
+    // Use i * 2 and i * 2 + 1 to ensure unique IDs
+    // Example: i=0 creates IDs 0 and 1, i=1 creates IDs 2 and 3, etc.
+    const tile1 = createTile(i * 2, color, shape);
+    const tile2 = createTile(i * 2 + 1, color, shape);
+
+    // Add both tiles to the collection
+    tiles.push(tile1, tile2);
+  }
+
+  // Shuffle the tiles so matching pairs aren't adjacent
+  // This makes the game challenging and unpredictable
+  return shuffleArray(tiles);
+};
+
+/**
+ * Checks if all tiles on the board have been matched
+ *
+ * This is used to determine when to generate a new board.
+ * When all tiles are matched, the player has cleared the board
+ * and should receive a new set of tiles.
+ *
+ * @param {Array<Object>} tiles - Array of tile objects to check
+ * @returns {boolean} True if all tiles are matched, false otherwise
+ *
+ * @example
+ * const tiles = [
+ *   { id: 0, matched: true },
+ *   { id: 1, matched: true }
+ * ];
+ * const allMatched = areAllTilesMatched(tiles); // Returns true
+ */
+export const areAllTilesMatched = (tiles) => {
+  // Use Array.every() to check if all tiles have matched: true
+  // Returns true only if every single tile is matched
+  return tiles.every((tile) => tile.matched);
+};
+
+/**
+ * Gets all unmatched tiles from the board
+ *
+ * This is useful for:
+ * - Determining which tiles are still in play
+ * - Counting remaining tiles
+ * - Filtering selections to only active tiles
+ *
+ * @param {Array<Object>} tiles - Array of all tile objects
+ * @returns {Array<Object>} Array containing only unmatched tiles
+ *
+ * @example
+ * const tiles = [
+ *   { id: 0, matched: true },
+ *   { id: 1, matched: false },
+ *   { id: 2, matched: false }
+ * ];
+ * const unmatched = getUnmatchedTiles(tiles);
+ * // Returns [{ id: 1, matched: false }, { id: 2, matched: false }]
+ */
+export const getUnmatchedTiles = (tiles) => {
+  // Filter to only include tiles where matched is false
+  return tiles.filter((tile) => !tile.matched);
+};
+
+/**
+ * Gets all currently selected tiles from the board
+ *
+ * This helps track which tiles the player has clicked.
+ * In the game, players can select up to 2 tiles at a time
+ * to attempt a match.
+ *
+ * @param {Array<Object>} tiles - Array of all tile objects
+ * @returns {Array<Object>} Array containing only selected tiles
+ *
+ * @example
+ * const tiles = [
+ *   { id: 0, selected: false },
+ *   { id: 1, selected: true },
+ *   { id: 2, selected: true }
+ * ];
+ * const selected = getSelectedTiles(tiles);
+ * // Returns [{ id: 1, selected: true }, { id: 2, selected: true }]
+ */
+export const getSelectedTiles = (tiles) => {
+  // Filter to only include tiles where selected is true
+  return tiles.filter((tile) => tile.selected);
+};
