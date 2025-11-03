@@ -228,3 +228,219 @@ export const getSelectedTiles = (tiles) => {
   // Filter to only include tiles where selected is true
   return tiles.filter((tile) => tile.selected);
 };
+
+// ==================== EMOJI-BASED TILE FUNCTIONS ====================
+
+/**
+ * Creates an empty emoji tile
+ *
+ * Emoji tiles start empty and have emojis spawn on them over time.
+ * Empty tiles display a placeholder and wait for emoji spawns.
+ *
+ * @param {number} id - Unique identifier for the tile
+ * @returns {Object} An empty emoji tile object
+ *
+ * @example
+ * const tile = createEmptyEmojiTile(0);
+ * // Returns: {
+ * //   id: 0,
+ * //   emoji: null,
+ * //   rarity: null,
+ * //   lifetime: 0,
+ * //   spawnedAt: null,
+ * //   matched: false,
+ * //   selected: false
+ * // }
+ */
+export const createEmptyEmojiTile = (id) => {
+  return {
+    // Unique identifier for React key and tile tracking
+    id,
+
+    // Emoji properties (null when empty)
+    emoji: null,        // The emoji character or null
+    rarity: null,       // 'common', 'rare', 'legendary', or null
+    lifetime: 0,        // Time until emoji disappears (ms)
+    spawnedAt: null,    // Timestamp when emoji spawned
+
+    // State properties
+    matched: false,     // Whether this tile has been successfully matched
+    selected: false,    // Whether this tile is currently selected by the player
+  };
+};
+
+/**
+ * Creates an emoji tile with emoji data
+ *
+ * Takes emoji spawn data and creates a complete tile object.
+ * Used when spawning a new emoji on a tile.
+ *
+ * @param {number} id - Unique identifier for the tile
+ * @param {Object} emojiData - Emoji data from spawnRandomEmoji()
+ * @param {string} emojiData.emoji - The emoji character
+ * @param {string} emojiData.rarity - Rarity tier
+ * @param {number} emojiData.lifetime - Lifetime in milliseconds
+ * @returns {Object} An emoji tile with emoji data
+ *
+ * @example
+ * const emojiData = { emoji: '🐶', rarity: 'common', lifetime: 15000 };
+ * const tile = createEmojiTile(0, emojiData);
+ * // Returns: {
+ * //   id: 0,
+ * //   emoji: '🐶',
+ * //   rarity: 'common',
+ * //   lifetime: 15000,
+ * //   spawnedAt: 1234567890,
+ * //   matched: false,
+ * //   selected: false
+ * // }
+ */
+export const createEmojiTile = (id, emojiData) => {
+  return {
+    // Unique identifier
+    id,
+
+    // Emoji properties from spawn data
+    emoji: emojiData.emoji,
+    rarity: emojiData.rarity,
+    lifetime: emojiData.lifetime,
+    spawnedAt: Date.now(), // Record spawn time for lifetime tracking
+
+    // State properties
+    matched: false,
+    selected: false,
+  };
+};
+
+/**
+ * Generates initial empty emoji tile board
+ *
+ * Creates a board full of empty tiles ready for emojis to spawn on.
+ * This is the starting state for the emoji collection game.
+ *
+ * @param {number} tileCount - Number of tiles to create (usually 8)
+ * @returns {Array<Object>} Array of empty emoji tiles
+ *
+ * @example
+ * const tiles = generateEmptyEmojiBoard(8);
+ * // Returns 8 empty tiles ready for emoji spawns
+ */
+export const generateEmptyEmojiBoard = (tileCount = 8) => {
+  const tiles = [];
+
+  for (let i = 0; i < tileCount; i++) {
+    tiles.push(createEmptyEmojiTile(i));
+  }
+
+  return tiles;
+};
+
+/**
+ * Gets all tiles that currently have emojis
+ *
+ * Filters to tiles with active emojis (not empty, not matched).
+ * Useful for tracking how many emojis are currently on board.
+ *
+ * @param {Array<Object>} tiles - Array of emoji tiles
+ * @returns {Array<Object>} Tiles with active emojis
+ *
+ * @example
+ * const activeTiles = getActivEmojiTiles(tiles);
+ * // Returns only tiles where emoji !== null and matched === false
+ */
+export const getActiveEmojiTiles = (tiles) => {
+  return tiles.filter((tile) => tile.emoji !== null && !tile.matched);
+};
+
+/**
+ * Gets all empty tiles available for emoji spawning
+ *
+ * Filters to tiles that don't have emojis and aren't matched.
+ * These are the tiles where new emojis can spawn.
+ *
+ * @param {Array<Object>} tiles - Array of emoji tiles
+ * @returns {Array<Object>} Empty, available tiles
+ *
+ * @example
+ * const emptyTiles = getEmptyEmojiTiles(tiles);
+ * // Returns tiles where emoji === null and matched === false
+ */
+export const getEmptyEmojiTiles = (tiles) => {
+  return tiles.filter((tile) => tile.emoji === null && !tile.matched);
+};
+
+/**
+ * Find an empty tile to spawn emoji on
+ *
+ * Randomly selects an available empty tile for emoji spawning.
+ * Returns null if no empty tiles available.
+ *
+ * @param {Array<Object>} tiles - Array of emoji tiles
+ * @returns {Object|null} Random empty tile or null if none available
+ *
+ * @example
+ * const targetTile = findEmptyTileForSpawn(tiles);
+ * if (targetTile) {
+ *   // Spawn emoji on this tile
+ * }
+ */
+export const findEmptyTileForSpawn = (tiles) => {
+  const emptyTiles = getEmptyEmojiTiles(tiles);
+
+  if (emptyTiles.length === 0) {
+    return null; // No empty tiles available
+  }
+
+  // Return random empty tile
+  return getRandomElement(emptyTiles);
+};
+
+/**
+ * Clears emoji from a tile (returns it to empty state)
+ *
+ * Used when emoji expires or is collected.
+ * Resets tile to empty state while preserving its ID.
+ *
+ * @param {Object} tile - Tile to clear
+ * @returns {Object} Cleared tile
+ *
+ * @example
+ * const clearedTile = clearEmojiFromTile(tile);
+ * // Returns: { id: 0, emoji: null, rarity: null, ... }
+ */
+export const clearEmojiFromTile = (tile) => {
+  return {
+    ...tile,
+    emoji: null,
+    rarity: null,
+    lifetime: 0,
+    spawnedAt: null,
+    selected: false,
+    // Keep matched state and id
+  };
+};
+
+/**
+ * Checks if a tile has an expired emoji
+ *
+ * Determines if the emoji on this tile has exceeded its lifetime
+ * and should disappear.
+ *
+ * @param {Object} tile - Tile to check
+ * @returns {boolean} True if emoji should disappear
+ *
+ * @example
+ * if (hasTileEmojiExpired(tile)) {
+ *   // Remove emoji from tile
+ * }
+ */
+export const hasTileEmojiExpired = (tile) => {
+  // No emoji or no spawn time = not expired
+  if (!tile.emoji || !tile.spawnedAt) {
+    return false;
+  }
+
+  // Check if time elapsed exceeds lifetime
+  const elapsed = Date.now() - tile.spawnedAt;
+  return elapsed >= tile.lifetime;
+};
