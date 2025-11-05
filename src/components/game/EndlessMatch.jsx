@@ -31,6 +31,7 @@ import TimeDisplay from './TimeDisplay';
 import VolumeControl from './VolumeControl';
 import GameOverScreen from './GameOverScreen';
 import CollectionGallery from './CollectionGallery';
+import CollectionFlare from './CollectionFlare';
 import { BookOpen } from 'lucide-react';
 import { GAME_CONFIG } from '../../config/gameConfig';
 
@@ -175,16 +176,36 @@ const EndlessMatch = () => {
             </div>
 
             {/* Game Board - Grid of hybrid tiles */}
-            <div className="grid grid-cols-4 gap-4">
-              {game.currentTiles.map((tile, index) => (
-                <HybridTile
-                  key={tile.id}
-                  tile={tile}
-                  index={index}
-                  showAnimation={game.matchAnimation === index}
-                  onClick={game.handleTileClick}
-                />
-              ))}
+            <div className="grid grid-cols-4 gap-4 relative">
+              {game.currentTiles.map((tile, index) => {
+                // Check if this tile should show collection flare
+                const showFlare = game.collectionFlare === index;
+
+                // Check if emoji was just collected (first time)
+                const isFirstTime =
+                  tile.emoji &&
+                  game.collection.collectedEmojis[tile.emoji]?.timesCollected === 1;
+
+                return (
+                  <div key={tile.id} className="relative">
+                    <HybridTile
+                      tile={tile}
+                      index={index}
+                      showAnimation={game.matchAnimation === index}
+                      onClick={game.handleTileClick}
+                    />
+
+                    {/* Collection flare overlay */}
+                    {showFlare && tile.emoji && (
+                      <CollectionFlare
+                        emoji={tile.emoji}
+                        rarity={tile.emojiRarity}
+                        isFirstTime={isFirstTime}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Helper text */}

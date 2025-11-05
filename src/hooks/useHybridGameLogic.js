@@ -58,6 +58,7 @@ export const useHybridGameLogic = (soundManager) => {
   const [multiplier, setMultiplier] = useState(1);
   const [lastMatchTime, setLastMatchTime] = useState(null);
   const [matchAnimation, setMatchAnimation] = useState(null);
+  const [collectionFlare, setCollectionFlare] = useState(null);
   const [collection, setCollection] = useState(loadCollection());
 
   const prevHighScoreRef = useRef(highScore);
@@ -67,6 +68,11 @@ export const useHybridGameLogic = (soundManager) => {
   const showMatchAnimation = useCallback((index) => {
     setMatchAnimation(index);
     setTimeout(() => setMatchAnimation(null), 500);
+  }, []);
+
+  const showCollectionFlare = useCallback((index) => {
+    setCollectionFlare(index);
+    setTimeout(() => setCollectionFlare(null), 1000);
   }, []);
 
   const updateTile = useCallback((tiles, tileId, updates) => {
@@ -122,6 +128,7 @@ export const useHybridGameLogic = (soundManager) => {
       spawnRandomEmoji
     ));
     setMatchAnimation(null);
+    setCollectionFlare(null);
     setLastMatchTime(null);
     setCollection(loadedCollection);
   }, [soundManager]);
@@ -175,6 +182,9 @@ export const useHybridGameLogic = (soundManager) => {
         const isFirstTime = !hasCollected(collection, tile1.emoji);
         const emojiPoints = calculateCollectionPoints(tile1.emojiRarity, multiplier, isFirstTime);
         points += emojiPoints;
+
+        // Show collection flare animation
+        showCollectionFlare(clickedIndex);
 
         // Add to collection
         const updatedCollection = addToCollection(collection, tile1.emoji, tile1.emojiRarity);
@@ -233,6 +243,7 @@ export const useHybridGameLogic = (soundManager) => {
     [
       soundManager,
       showMatchAnimation,
+      showCollectionFlare,
       updateTile,
       lastMatchTime,
       multiplier,
@@ -362,6 +373,7 @@ export const useHybridGameLogic = (soundManager) => {
     currentTiles,
     multiplier,
     matchAnimation,
+    collectionFlare,
     collection,
     totalEmojis: getTotalEmojiCount(),
     GAME_STATES,
