@@ -23,6 +23,7 @@ import { Button } from '../ui/Button';
  * @param {Object} props - Component props
  * @param {number} props.highScore - Final high score to display
  * @param {Function} props.onPlayAgain - Callback when play again is clicked
+ * @param {Function} props.onReturnToMenu - Callback when return to menu is clicked
  * @param {Object} props.config - Game configuration object
  * @param {Object} props.config.animations - Animation configuration
  * @param {string} props.config.animations.gameOverAnimation - CSS class for fade-in
@@ -32,10 +33,11 @@ import { Button } from '../ui/Button';
  * <GameOverScreen
  *   highScore={1500}
  *   onPlayAgain={handlePlayAgain}
+ *   onReturnToMenu={handleReturnToMenu}
  *   config={GAME_CONFIG}
  * />
  */
-export const GameOverScreen = ({ highScore, onPlayAgain, config }) => {
+export const GameOverScreen = ({ highScore, onPlayAgain, onReturnToMenu, config }) => {
   return (
     <div className={`text-center mt-6 ${config.animations.gameOverAnimation}`}>
       {/* Game Over Title */}
@@ -44,11 +46,19 @@ export const GameOverScreen = ({ highScore, onPlayAgain, config }) => {
       {/* High Score Display */}
       <p className="mb-4">High Score: {highScore}</p>
 
-      {/* Play Again Button */}
-      {/* Bounce animation to draw attention */}
-      <Button onClick={onPlayAgain} className="animate-bounce">
-        Play Again
-      </Button>
+      {/* Action Buttons */}
+      <div className="flex gap-3 justify-center">
+        {/* Play Again Button */}
+        {/* Bounce animation to draw attention */}
+        <Button onClick={onPlayAgain} className="animate-bounce">
+          Play Again
+        </Button>
+
+        {/* Return to Menu Button */}
+        <Button onClick={onReturnToMenu} variant="secondary">
+          Return to Menu
+        </Button>
+      </div>
     </div>
   );
 };

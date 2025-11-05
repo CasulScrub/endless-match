@@ -95,6 +95,81 @@ export const createTile = (id, color, shape) => {
 };
 
 /**
+ * Generates tiles with optional emoji overlays
+ *
+ * This creates a board where some tile pairs randomly have matching emojis.
+ * Emojis are assigned AT CREATION, not spawned later.
+ *
+ * @param {Object} config - Game configuration
+ * @param {number} collectionsCount - Total collections (for progression)
+ * @param {Function} spawnEmojiFunc - Function to spawn emoji data
+ * @returns {Array<Object>} Tiles with optional emojis
+ *
+ * @example
+ * const tiles = generateTilesWithEmojis(config, 50, spawnRandomEmoji);
+ * // Some pairs will have matching emojis, others won't
+ */
+export const generateTilesWithEmojis = (config, collectionsCount, spawnEmojiFunc) => {
+  const { colors, shapes, pairsPerBoard } = config;
+  const tiles = [];
+
+  // Generate the specified number of matching pairs
+  for (let i = 0; i < pairsPerBoard; i++) {
+    // Randomly select visual properties for this pair
+    const color = getRandomElement(colors);
+    const shape = getRandomElement(shapes);
+
+    // Create base tile properties
+    const tile1Id = i * 2;
+    const tile2Id = i * 2 + 1;
+
+    // 30% chance this pair gets an emoji
+    const hasEmoji = Math.random() < 0.3;
+
+    let tile1, tile2;
+
+    if (hasEmoji) {
+      // Generate emoji for this pair
+      const emojiData = spawnEmojiFunc(null, collectionsCount);
+
+      // Create tiles with emoji
+      tile1 = {
+        id: tile1Id,
+        color,
+        shape,
+        matched: false,
+        selected: false,
+        emoji: emojiData.emoji,
+        emojiRarity: emojiData.rarity,
+        emojiLifetime: emojiData.lifetime,
+        emojiSpawnedAt: Date.now(),
+      };
+
+      tile2 = {
+        id: tile2Id,
+        color,
+        shape,
+        matched: false,
+        selected: false,
+        emoji: emojiData.emoji,
+        emojiRarity: emojiData.rarity,
+        emojiLifetime: emojiData.lifetime,
+        emojiSpawnedAt: Date.now(),
+      };
+    } else {
+      // Create tiles without emoji
+      tile1 = createTile(tile1Id, color, shape);
+      tile2 = createTile(tile2Id, color, shape);
+    }
+
+    tiles.push(tile1, tile2);
+  }
+
+  // Shuffle the tiles
+  return shuffleArray(tiles);
+};
+
+/**
  * Generates a complete set of tiles for the game board
  *
  * This is the main function for creating game boards. It:

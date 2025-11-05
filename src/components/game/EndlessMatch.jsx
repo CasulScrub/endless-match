@@ -61,6 +61,12 @@ const EndlessMatch = () => {
     setShowGallery(false);
   };
 
+  const handleQuit = () => {
+    soundManager.playSound('tileClick');
+    // TODO: Implement proper quit functionality when deployed
+    alert('Quit functionality will be implemented when the game is deployed.');
+  };
+
   // ==================== RENDER ====================
 
   return (
@@ -113,12 +119,21 @@ const EndlessMatch = () => {
               </div>
             )}
 
-            <button
-              onClick={game.startGame}
-              className="px-8 py-4 bg-blue-500 text-white rounded-md font-medium hover:bg-blue-600 transition-colors"
-            >
-              Start Game
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={game.startGame}
+                className="px-8 py-4 bg-blue-500 text-white rounded-md font-medium hover:bg-blue-600 transition-colors"
+              >
+                Start Game
+              </button>
+
+              <button
+                onClick={handleQuit}
+                className="px-8 py-4 bg-gray-500 text-white rounded-md font-medium hover:bg-gray-600 transition-colors"
+              >
+                Quit
+              </button>
+            </div>
           </div>
         )}
 
@@ -185,6 +200,7 @@ const EndlessMatch = () => {
               <GameOverScreen
                 highScore={game.highScore}
                 onPlayAgain={game.startGame}
+                onReturnToMenu={game.returnToMenu}
                 config={GAME_CONFIG}
               />
             )}

@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GAME_CONFIG, GAME_STATES } from '../config/gameConfig';
-import { generateTiles, getSelectedTiles } from '../utils/tileGenerator';
+import { generateTiles, generateTilesWithEmojis, getSelectedTiles } from '../utils/tileGenerator';
 import {
   calculateMatchPoints,
   calculateNewMultiplier,
@@ -59,7 +59,6 @@ export const useHybridGameLogic = (soundManager) => {
   const [lastMatchTime, setLastMatchTime] = useState(null);
   const [matchAnimation, setMatchAnimation] = useState(null);
   const [collection, setCollection] = useState(loadCollection());
-  const [lastEmojiSpawnTime, setLastEmojiSpawnTime] = useState(null);
 
   const prevHighScoreRef = useRef(highScore);
 
@@ -80,64 +79,7 @@ export const useHybridGameLogic = (soundManager) => {
     return tiles.map((tile) => ({ ...tile, selected: false }));
   }, []);
 
-  // ==================== EMOJI SPAWN SYSTEM ====================
-
-  /**
-   * Spawn emoji on a random tile
-   *
-   * Picks a random unmatched tile and adds an emoji overlay with lifetime
-   */
-  const spawnEmojiOnTile = useCallback(() => {
-    setCurrentTiles((prevTiles) => {
-      // Find eligible tiles (not matched, no emoji currently)
-      const eligibleTiles = prevTiles.filter(tile => !tile.matched && !tile.emoji);
-
-      if (eligibleTiles.length === 0) return prevTiles;
-
-      // Pick 2 random tiles for a matching pair
-      const tile1 = eligibleTiles[Math.floor(Math.random() * eligibleTiles.length)];
-      const remainingTiles = eligibleTiles.filter(t => t.id !== tile1.id);
-
-      if (remainingTiles.length === 0) return prevTiles;
-
-      const tile2 = remainingTiles[Math.floor(Math.random() * remainingTiles.length)];
-
-      // Spawn random emoji
-      const emojiData = spawnRandomEmoji(null, collection.stats.totalCollected);
-
-      // Add emoji to both tiles
-      let updatedTiles = updateTile(prevTiles, tile1.id, {
-        emoji: emojiData.emoji,
-        emojiRarity: emojiData.rarity,
-        emojiLifetime: emojiData.lifetime,
-        emojiSpawnedAt: Date.now(),
-      });
-
-      updatedTiles = updateTile(updatedTiles, tile2.id, {
-        emoji: emojiData.emoji,
-        emojiRarity: emojiData.rarity,
-        emojiLifetime: emojiData.lifetime,
-        emojiSpawnedAt: Date.now(),
-      });
-
-      return updatedTiles;
-    });
-
-    setLastEmojiSpawnTime(Date.now());
-    soundManager.playSound('tileClick');
-  }, [collection.stats.totalCollected, soundManager, updateTile]);
-
-  /**
-   * Check and spawn emojis periodically
-   */
-  const checkAndSpawnEmojis = useCallback(() => {
-    // Spawn emoji every 5-10 seconds
-    const spawnInterval = 5000 + Math.random() * 5000;
-
-    if (!lastEmojiSpawnTime || Date.now() - lastEmojiSpawnTime > spawnInterval) {
-      spawnEmojiOnTile();
-    }
-  }, [lastEmojiSpawnTime, spawnEmojiOnTile]);
+  // ==================== EMOJI EXPIRATION SYSTEM ====================
 
   /**
    * Remove expired emojis from tiles
@@ -167,16 +109,21 @@ export const useHybridGameLogic = (soundManager) => {
     soundManager.playSound('gameStart');
     soundManager.startBackgroundMusic();
 
+    const loadedCollection = loadCollection();
+
     setGameState(GAME_STATES.PLAYING);
     setScore(0);
     setStreak(0);
     setMultiplier(1);
     setTimeLeft(GAME_CONFIG.timing.startTime);
-    setCurrentTiles(generateTiles(GAME_CONFIG.tiles));
+    setCurrentTiles(generateTilesWithEmojis(
+      GAME_CONFIG.tiles,
+      loadedCollection.stats.totalCollected,
+      spawnRandomEmoji
+    ));
     setMatchAnimation(null);
     setLastMatchTime(null);
-    setLastEmojiSpawnTime(null);
-    setCollection(loadCollection());
+    setCollection(loadedCollection);
   }, [soundManager]);
 
   const endGame = useCallback(() => {
@@ -184,6 +131,11 @@ export const useHybridGameLogic = (soundManager) => {
     setGameState(GAME_STATES.ENDED);
     setHighScore((currentHigh) => Math.max(currentHigh, score));
   }, [soundManager, score]);
+
+  const returnToMenu = useCallback(() => {
+    soundManager.playSound('tileClick');
+    setGameState(GAME_STATES.WAITING);
+  }, [soundManager]);
 
   // ==================== MATCH HANDLING ====================
 
@@ -264,7 +216,11 @@ export const useHybridGameLogic = (soundManager) => {
       if (updatedTiles.every(tile => tile.matched)) {
         soundManager.playSound('boardClear');
         setTimeout(() => {
-          setCurrentTiles(generateTiles(GAME_CONFIG.tiles));
+          setCurrentTiles(generateTilesWithEmojis(
+            GAME_CONFIG.tiles,
+            collection.stats.totalCollected,
+            spawnRandomEmoji
+          ));
         }, GAME_CONFIG.timing.animationDuration);
       } else {
         setTimeout(() => {
@@ -291,11 +247,27 @@ export const useHybridGameLogic = (soundManager) => {
       setStreak(0);
       setMultiplier(1);
 
+      // Clear selections and destroy emojis on selected tiles
       setTimeout(() => {
-        setCurrentTiles((prevTiles) => clearSelections(prevTiles));
+        setCurrentTiles((prevTiles) =>
+          prevTiles.map((tile) => {
+            // If tile was selected, remove emoji (destroy it)
+            if (tile.selected) {
+              return {
+                ...tile,
+                selected: false,
+                emoji: null,
+                emojiRarity: null,
+                emojiLifetime: null,
+                emojiSpawnedAt: null,
+              };
+            }
+            return { ...tile, selected: false };
+          })
+        );
       }, GAME_CONFIG.timing.animationDuration);
     },
-    [soundManager, clearSelections]
+    [soundManager]
   );
 
   const handleTileClick = useCallback(
@@ -355,18 +327,18 @@ export const useHybridGameLogic = (soundManager) => {
   }, [gameState, endGame]);
 
   /**
-   * Emoji spawn and expiration loop
+   * Emoji expiration loop
+   * Checks every 100ms for expired emojis and removes them
    */
   useEffect(() => {
     if (gameState !== GAME_STATES.PLAYING) return;
 
     const interval = setInterval(() => {
       checkAndRemoveExpiredEmojis();
-      checkAndSpawnEmojis();
     }, 100);
 
     return () => clearInterval(interval);
-  }, [gameState, checkAndRemoveExpiredEmojis, checkAndSpawnEmojis]);
+  }, [gameState, checkAndRemoveExpiredEmojis]);
 
   /**
    * High score detection
@@ -394,6 +366,7 @@ export const useHybridGameLogic = (soundManager) => {
     totalEmojis: getTotalEmojiCount(),
     GAME_STATES,
     startGame,
+    returnToMenu,
     handleTileClick,
   };
 };
