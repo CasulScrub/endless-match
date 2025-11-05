@@ -13,7 +13,7 @@
  * - Content layer (z-index: 10)
  */
 
-import EndlessMatch from './components/game/EndlessMatch';
+import EmojiMatch from './components/game/EmojiMatch';
 import { SoundProvider } from './context/SoundContext';
 import GradientBackground from './utils/GradientBackground';
 
@@ -23,7 +23,7 @@ import GradientBackground from './utils/GradientBackground';
  * Sets up the application structure with:
  * 1. SoundProvider - Makes sound functions available throughout app
  * 2. GradientBackground - Animated gradient background
- * 3. EndlessMatch - The main game component
+ * 3. EmojiMatch - The emoji collection game component
  *
  * @returns {JSX.Element} Complete application
  */
@@ -37,7 +37,7 @@ function App() {
 
         {/* Main content area (above background) */}
         <div className="relative z-10 p-4">
-          <EndlessMatch />
+          <EmojiMatch />
         </div>
       </div>
     </SoundProvider>
