@@ -1,117 +1,205 @@
 /**
- * EndlessMatch - Main Game Component
+ * EndlessMatch - Hybrid Tile + Emoji Collection Game
  *
- * This is the orchestrator component for the Endless Match game.
- * It's responsible for:
- * - Composing all game UI components
- * - Connecting game logic (via hook) to presentation (via components)
- * - Determining which screen to show based on game state
+ * This combines the original tile-matching game with emoji collection mechanics.
  *
- * NOTE: This component contains NO game logic - all logic is in
- * the useGameLogic hook. This component is purely presentational,
- * making it easy to understand, maintain, and test.
+ * Game mechanics:
+ * - Board has colored shape tiles (like original)
+ * - Emojis randomly spawn ON TOP of tiles as temporary overlays
+ * - Match tiles by color+shape (normal gameplay)
+ * - If matched tiles both have the SAME emoji = COLLECTION BONUS!
+ * - Emojis disappear after lifetime
+ * - Global timer counts down (game ends at 0)
+ * - Regular matches: +3 seconds
+ * - Emoji matches: +10 seconds + add to collection
  *
  * Architecture:
- * - useGameLogic hook: Manages all game state and logic
- * - This component: Renders appropriate UI based on game state
- * - Child components: Display specific parts of the UI
+ * - useHybridGameLogic hook: Manages all state and logic
+ * - This component: Renders UI based on state
+ * - Child components: Display specific UI elements
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../ui/Card';
+import { Badge } from '../ui/Badge';
 import { useSound } from '../../context/SoundContext';
-import { useGameLogic } from '../../hooks/useGameLogic';
+import { useHybridGameLogic } from '../../hooks/useHybridGameLogic';
 import WelcomeScreen from './WelcomeScreen';
-import GameBoard from './GameBoard';
+import HybridTile from './HybridTile';
 import GameStats from './GameStats';
 import TimeDisplay from './TimeDisplay';
 import VolumeControl from './VolumeControl';
 import GameOverScreen from './GameOverScreen';
+import CollectionGallery from './CollectionGallery';
+import { BookOpen } from 'lucide-react';
+import { GAME_CONFIG } from '../../config/gameConfig';
 
 /**
  * Main game component
  *
- * Manages game flow and renders appropriate screens based on game state:
- * - WAITING: Shows welcome screen with start button
- * - PLAYING: Shows game board, stats, and controls
- * - ENDED: Shows game board (faded) with game over overlay
- *
  * @returns {JSX.Element} Complete game interface
- *
- * @example
- * <EndlessMatch />
  */
 const EndlessMatch = () => {
   // ==================== HOOKS ====================
 
-  /**
-   * Get sound management functions
-   * Used by game logic hook to play sounds at appropriate times
-   */
   const soundManager = useSound();
+  const game = useHybridGameLogic(soundManager);
 
   /**
-   * Get game state and control functions
-   * This hook contains ALL game logic - state, calculations, event handlers
+   * Collection gallery modal state
    */
-  const game = useGameLogic(soundManager);
+  const [showGallery, setShowGallery] = useState(false);
+
+  // ==================== HANDLERS ====================
+
+  const handleOpenGallery = () => {
+    soundManager.playSound('tileClick');
+    setShowGallery(true);
+  };
+
+  const handleCloseGallery = () => {
+    setShowGallery(false);
+  };
 
   // ==================== RENDER ====================
 
   return (
-    <Card className={`p-6 ${game.config.ui.maxWidth} mx-auto relative overflow-hidden`}>
-      {/* ===== WAITING STATE: Welcome Screen ===== */}
-      {game.gameState === game.GAME_STATES.WAITING && (
-        <WelcomeScreen onStartGame={game.startGame} />
-      )}
+    <>
+      <Card className="p-6 max-w-2xl mx-auto relative overflow-hidden">
+        {/* ===== WAITING STATE: Welcome Screen ===== */}
+        {game.gameState === game.GAME_STATES.WAITING && (
+          <div className="text-center">
+            <h1 className="text-3xl font-bold mb-2">Endless Match</h1>
+            <p className="text-gray-600 mb-6">
+              Match colored tiles! Catch emojis for bonus points & time!
+            </p>
 
-      {/* ===== PLAYING & ENDED STATES: Game Interface ===== */}
-      {game.gameState !== game.GAME_STATES.WAITING && (
-        <>
-          {/* Top Stats Bar */}
-          {/* Shows volume control, stats, and time */}
-          <div className="flex justify-between mb-4">
-            {/* Left side: Volume control and game stats */}
-            <div className={`flex ${game.config.ui.badgeGap}`}>
-              {/* Volume control button (leftmost position) */}
-              <VolumeControl />
+            {/* Collection stats from previous sessions */}
+            {game.collection.stats.uniqueCount > 0 && (
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-2">
+                  Your Collection
+                </h3>
+                <div className="flex justify-center gap-4">
+                  <div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {game.collection.stats.uniqueCount}
+                    </div>
+                    <div className="text-sm text-gray-600">Emojis</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {game.collection.stats.totalCollected}
+                    </div>
+                    <div className="text-sm text-gray-600">Collections</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {Math.round(
+                        (game.collection.stats.uniqueCount / game.totalEmojis) * 100
+                      )}
+                      %
+                    </div>
+                    <div className="text-sm text-gray-600">Complete</div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleOpenGallery}
+                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                >
+                  <BookOpen className="inline w-4 h-4 mr-2" />
+                  View Collection
+                </button>
+              </div>
+            )}
 
-              {/* Game statistics badges (score, streak, multiplier) */}
-              <GameStats
-                score={game.score}
-                highScore={game.highScore}
-                streak={game.streak}
-                multiplier={game.multiplier}
-                config={game.config}
-              />
+            <button
+              onClick={game.startGame}
+              className="px-8 py-4 bg-blue-500 text-white rounded-md font-medium hover:bg-blue-600 transition-colors"
+            >
+              Start Game
+            </button>
+          </div>
+        )}
+
+        {/* ===== PLAYING & ENDED STATES: Game Interface ===== */}
+        {game.gameState !== game.GAME_STATES.WAITING && (
+          <>
+            {/* Top Stats Bar */}
+            <div className="flex justify-between mb-4">
+              {/* Left side: Volume + Stats */}
+              <div className="flex gap-3">
+                <VolumeControl />
+
+                <GameStats
+                  score={game.score}
+                  highScore={game.highScore}
+                  streak={game.streak}
+                  multiplier={game.multiplier}
+                  config={GAME_CONFIG}
+                />
+              </div>
+
+              {/* Right side: Collection + Time */}
+              <div className="flex gap-2">
+                {/* Collection count badge */}
+                {game.collection.stats.uniqueCount > 0 && (
+                  <Badge
+                    onClick={handleOpenGallery}
+                    variant="secondary"
+                    className="text-lg cursor-pointer hover:bg-blue-200 transition-colors"
+                  >
+                    <BookOpen className="w-4 h-4 mr-1" />
+                    {game.collection.stats.uniqueCount}/{game.totalEmojis}
+                  </Badge>
+                )}
+
+                {/* Time remaining */}
+                <TimeDisplay timeLeft={game.timeLeft} config={GAME_CONFIG} />
+              </div>
             </div>
 
-            {/* Right side: Time remaining */}
-            <TimeDisplay timeLeft={game.timeLeft} config={game.config} />
-          </div>
+            {/* Game Board - Grid of hybrid tiles */}
+            <div className="grid grid-cols-4 gap-4">
+              {game.currentTiles.map((tile, index) => (
+                <HybridTile
+                  key={tile.id}
+                  tile={tile}
+                  index={index}
+                  showAnimation={game.matchAnimation === index}
+                  onClick={game.handleTileClick}
+                />
+              ))}
+            </div>
 
-          {/* Game Board */}
-          {/* Grid of tiles that player interacts with */}
-          <GameBoard
-            tiles={game.currentTiles}
-            onTileClick={game.handleTileClick}
-            matchAnimation={game.matchAnimation}
-            disabled={game.gameState === game.GAME_STATES.ENDED}
-            config={game.config}
-          />
+            {/* Helper text */}
+            <div className="mt-4 text-center text-sm text-gray-600">
+              <p>Match tiles by color & shape!</p>
+              <p className="text-xs mt-1">
+                Catch matching emojis for +10s time & collection bonus! 🎯
+              </p>
+            </div>
 
-          {/* ===== ENDED STATE: Game Over Overlay ===== */}
-          {/* Shows over the game board when time runs out */}
-          {game.gameState === game.GAME_STATES.ENDED && (
-            <GameOverScreen
-              highScore={game.highScore}
-              onPlayAgain={game.startGame}
-              config={game.config}
-            />
-          )}
-        </>
-      )}
-    </Card>
+            {/* ===== ENDED STATE: Game Over Overlay ===== */}
+            {game.gameState === game.GAME_STATES.ENDED && (
+              <GameOverScreen
+                highScore={game.highScore}
+                onPlayAgain={game.startGame}
+                config={GAME_CONFIG}
+              />
+            )}
+          </>
+        )}
+      </Card>
+
+      {/* Collection Gallery Modal */}
+      <CollectionGallery
+        collection={game.collection}
+        totalEmojis={game.totalEmojis}
+        isOpen={showGallery}
+        onClose={handleCloseGallery}
+      />
+    </>
   );
 };
 
